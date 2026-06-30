@@ -691,7 +691,7 @@ Ain Shams University
 
 <br/>
 
-**OralCancer AI** — Graduation Project · Faculty of Computer and Information Science · Ain Shams University · 2024 / 2025
+**OralCancer AI** — Graduation Project · Faculty of Computer and Information Science · Ain Shams University · 2025 / 2026
 
 <br/>
 
