@@ -23,11 +23,13 @@ import shutil
 
 from PySide6.QtCore import QObject, Signal, QThread
 
+from core.utils import resource_path
+
 # ── ▶  UPDATE THESE PATHS TO YOUR LOCAL MODEL FILES  ◀ ───────
-MODEL_SEG_PATH  = "models/weights/unet_weights2.pth"
-MODEL_4_PATH    = "models/weights/best_convnext_4.pth"
-MODEL_2_PATH    = "models/weights/best_efficientnet_2.pth"
-MODEL_5_PATH    = "models/weights/best_convnext_5.pth"
+MODEL_SEG_PATH  = resource_path("models/weights/unet_weights2.pth")
+MODEL_4_PATH    = resource_path("models/weights/best_convnext_4.pth")
+MODEL_2_PATH    = resource_path("models/weights/best_efficientnet_2.pth")
+MODEL_5_PATH    = resource_path("models/weights/best_convnext_5.pth")
 
 # ─────────────────────────────────────────────────────────────
 

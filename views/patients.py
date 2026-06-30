@@ -89,8 +89,8 @@ class FilterBtn(QPushButton):
             """)
         self.setText(f"  {self._label}   {self._count}")
 
-    def set_active(self, a):  self._active = a; self._refresh()
-    def update_count(self, c): self._count = c; self._refresh()
+    def set_active(self, a):   self._active = a; self._refresh()
+    def update_count(self, c): self._count  = c; self._refresh()
 
 
 def _badge(text, color):
@@ -103,12 +103,6 @@ def _badge(text, color):
     return b
 
 
-# ─────────────────────────────────────────────────────────────
-#  PATIENT ROW  — mirrors Doctors layout with stretch ratios
-#  avatar(38+12) | Name(stretch=2) | Phone(stretch=2) |
-#  Status(stretch=1) | Stage(stretch=1) | Age(stretch=1) |
-#  Gender(stretch=1) | LastVisit(stretch=1) | gap | arrow(32)
-# ─────────────────────────────────────────────────────────────
 class PatientRow(QFrame):
     detail_clicked = Signal(int)
 
@@ -123,7 +117,6 @@ class PatientRow(QFrame):
         hl.setContentsMargins(12, 0, 12, 0)
         hl.setSpacing(0)
 
-        # Avatar
         av = QLabel()
         av.setFixedSize(38, 38); av.setAlignment(Qt.AlignCenter)
         av.setStyleSheet("background:transparent; border:none;")
@@ -147,15 +140,11 @@ class PatientRow(QFrame):
             l.setAlignment(align)
             return l
 
-        # Name  stretch=2
         hl.addWidget(cell(patient.full_name or "—"), 2)
-
-        # Phone  stretch=2
         hl.addWidget(cell(
             getattr(patient, "phone_number", "") or "—",
             Qt.AlignCenter), 2)
 
-        # Status badge  stretch=1
         status = getattr(patient, "status", None) or "—"
         status_color = (RED    if status == "Positive"  else
                         GREEN  if status == "Negative"  else
@@ -171,25 +160,17 @@ class PatientRow(QFrame):
             bhl.addStretch()
             hl.addWidget(badge_w, 1)
 
-        # Stage  stretch=1
         stage = getattr(patient, "stage", None) or "—"
         hl.addWidget(cell(stage, Qt.AlignCenter), 1)
-
-        # Age  stretch=1
         hl.addWidget(cell(
             getattr(patient, "age", "—") or "—",
             Qt.AlignCenter), 1)
-
-        # Gender  stretch=1
         hl.addWidget(cell(
             getattr(patient, "gender", "—") or "—",
             Qt.AlignCenter), 1)
-
-        # Last Visit  stretch=1
         lv = getattr(patient, "last_visit", None) or "—"
         hl.addWidget(cell(lv, Qt.AlignCenter), 1)
 
-        # Arrow
         arrow_btn = QPushButton("›")
         arrow_btn.setFixedSize(32, 32)
         arrow_btn.setCursor(Qt.PointingHandCursor)
@@ -352,6 +333,7 @@ class PatientsContent(QWidget):
         self._current_page  = 1
         self._active_filter = "All"
         self._search_text   = ""
+        self._selected_date = None
         self._build_ui()
         self.load_patients()
 
@@ -372,12 +354,9 @@ class PatientsContent(QWidget):
         back_lbl.clicked.connect(self.navigate_back.emit)
         top.addWidget(back_lbl); top.addStretch()
 
-        # Date picker
         self._date_btn = QPushButton()
         self._date_btn.setFixedHeight(38); self._date_btn.setCursor(Qt.PointingHandCursor)
-        self._selected_date = datetime.now()
-        self._date_btn.setText(
-            f"  📅  {self._selected_date.strftime('%d %b %Y')}")
+        self._date_btn.setText("  📅  Select Date")
         self._date_btn.setFont(_semi(12))
         self._date_btn.setStyleSheet(f"""
             QPushButton {{ background:{WHITE}; color:{TEXT_DARK};
@@ -423,20 +402,25 @@ class PatientsContent(QWidget):
             QCalendarWidget QSpinBox::down-button {{ width:0; height:0; }}
         """)
         self._calendar_popup.clicked.connect(self._on_date_selected)
-        top.addWidget(self._date_btn); top.addSpacing(8)
 
-        self._status_filter_btn = QPushButton("All Statuses  ▾")
-        self._status_filter_btn.setFixedHeight(38)
-        self._status_filter_btn.setMinimumWidth(130)
-        self._status_filter_btn.setCursor(Qt.PointingHandCursor)
-        self._status_filter_btn.setFont(_semi(11))
-        self._status_filter_btn.setStyleSheet(f"""
-            QPushButton {{ background:{WHITE}; color:{TEXT_DARK};
-                border:1px solid {CARD_BORDER}; border-radius:10px;
-                padding:0 12px; }}
-            QPushButton:hover {{ border:1px solid {BLUE}; }}
+        self._clear_date_btn = QPushButton("✕")
+        self._clear_date_btn.setFixedSize(28, 28)
+        self._clear_date_btn.setCursor(Qt.PointingHandCursor)
+        self._clear_date_btn.setFont(_semi(11))
+        self._clear_date_btn.setStyleSheet(f"""
+            QPushButton {{ background:#F0F4FF; color:{TEXT_MID};
+                border-radius:6px; border:none; }}
+            QPushButton:hover {{ background:#FFDEDE; color:{RED}; }}
         """)
-        top.addWidget(self._status_filter_btn); top.addSpacing(8)
+        self._clear_date_btn.setVisible(False)
+        self._clear_date_btn.clicked.connect(self._clear_date)
+
+        date_row = QHBoxLayout()
+        date_row.setSpacing(4); date_row.setContentsMargins(0, 0, 0, 0)
+        date_row.addWidget(self._date_btn)
+        date_row.addWidget(self._clear_date_btn)
+        top.addLayout(date_row)
+        top.addSpacing(8)
 
         add_btn = QPushButton("+ Add Patient")
         add_btn.setFixedHeight(38); add_btn.setCursor(Qt.PointingHandCursor)
@@ -461,7 +445,6 @@ class PatientsContent(QWidget):
         card_vl = QVBoxLayout(card)
         card_vl.setContentsMargins(16, 16, 16, 16); card_vl.setSpacing(12)
 
-        # Search bar
         sf = QFrame()
         sf.setStyleSheet(
             f"QFrame {{ background:{WHITE}; border:1px solid {CARD_BORDER};"
@@ -496,7 +479,6 @@ class PatientsContent(QWidget):
         shl.addWidget(search_icon); shl.addWidget(self._search, 1)
         card_vl.addWidget(sf)
 
-        # Filter tabs
         tabs = QHBoxLayout(); tabs.setSpacing(6)
         self._filter_btns = {}
         for label, color in [("All", WHITE), ("Positive", RED),
@@ -509,22 +491,19 @@ class PatientsContent(QWidget):
         tabs.addStretch()
         card_vl.addLayout(tabs)
 
-        # ── Table header — mirrors PatientRow stretch ratios ──
         hdr = QFrame()
         hdr.setStyleSheet("background:transparent; border:none;")
         hdr_hl = QHBoxLayout(hdr)
         hdr_hl.setContentsMargins(12, 4, 12, 4); hdr_hl.setSpacing(0)
         hdr.setFixedHeight(36)
 
-        def _hl(text, stretch=0,
-                align=Qt.AlignLeft | Qt.AlignVCenter):
+        def _hl(text, stretch=0, align=Qt.AlignLeft | Qt.AlignVCenter):
             l = QLabel(text); l.setFont(_semi(10))
             l.setStyleSheet(
                 f"color:{TEXT_MID}; background:transparent; border:none;")
             l.setAlignment(align)
             return l, stretch
 
-        # Same spacer as avatar column: 38 px + 12 px spacing = 50 px
         sp = QLabel(); sp.setFixedWidth(50); hdr_hl.addWidget(sp)
         for lbl, s in [
             _hl("Name",       2),
@@ -549,11 +528,11 @@ class PatientsContent(QWidget):
         self._rows_vl.setContentsMargins(0, 0, 0, 0); self._rows_vl.setSpacing(0)
         card_vl.addWidget(self._rows_widget, 1)
 
-        # Bottom: count + pagination
         bottom = QHBoxLayout()
         self._count_lbl = QLabel("")
         self._count_lbl.setFont(_semi(10))
-        self._count_lbl.setStyleSheet(f"color:{TEXT_MID}; background:transparent;")
+        self._count_lbl.setStyleSheet(
+            f"color:{TEXT_MID}; background:transparent;")
         bottom.addWidget(self._count_lbl); bottom.addStretch()
         self._pagination = PaginationBar()
         self._pagination.page_changed.connect(self._go_to_page)
@@ -568,7 +547,15 @@ class PatientsContent(QWidget):
         self._selected_date = datetime(qdate.year(), qdate.month(), qdate.day())
         self._date_btn.setText(
             f"  📅  {self._selected_date.strftime('%d %b %Y')}")
+        self._clear_date_btn.setVisible(True)
         self._calendar_popup.hide()
+        self._apply_filters()
+
+    def _clear_date(self):
+        self._selected_date = None
+        self._date_btn.setText("  📅  Select Date")
+        self._clear_date_btn.setVisible(False)
+        self._apply_filters()
 
     def load_patients(self):
         self._all_patients = _load_patients_from_db()
@@ -576,25 +563,48 @@ class PatientsContent(QWidget):
 
     def _apply_filters(self):
         pts = self._all_patients
-        if self._active_filter != "All":
+
+        # ── Step 1: apply date filter first ──────────────────
+        if self._selected_date:
+            selected_str = self._selected_date.strftime("%d %b %Y")
             pts = [p for p in pts
-                   if getattr(p, "status", "") == self._active_filter]
+                   if getattr(p, "last_visit", "—") == selected_str]
+
+        # ── Step 2: update badge counts from date-filtered pool
+        # FIX: counts now reflect only patients visible after the
+        # date filter, not the entire database.
+        self._update_counts(pts)
+
+        # ── Step 3: apply search filter ───────────────────────
         if self._search_text:
             q = self._search_text.lower()
             pts = [p for p in pts
                    if q in (p.full_name or "").lower()]
-        self._filtered = pts; self._current_page = 1
-        self._update_counts(); self._render_page()
 
-    def _update_counts(self):
-        all_pts = self._all_patients
-        self._filter_btns["All"].update_count(len(all_pts))
+        # ── Step 4: apply status filter ───────────────────────
+        if self._active_filter != "All":
+            pts = [p for p in pts
+                   if getattr(p, "status", "") == self._active_filter]
+
+        self._filtered = pts
+        self._current_page = 1
+        self._render_page()
+
+    def _update_counts(self, pool: list):
+        """
+        Update the filter-tab badge counts from *pool*
+        (which is already date-filtered).
+        FIX: was always counting from self._all_patients,
+        so selecting a date with no matches still showed
+        the full totals on the All/Positive/Negative/PreCancer tabs.
+        """
+        self._filter_btns["All"].update_count(len(pool))
         self._filter_btns["Positive"].update_count(
-            sum(1 for p in all_pts if getattr(p, "status", "") == "Positive"))
+            sum(1 for p in pool if getattr(p, "status", "") == "Positive"))
         self._filter_btns["Negative"].update_count(
-            sum(1 for p in all_pts if getattr(p, "status", "") == "Negative"))
+            sum(1 for p in pool if getattr(p, "status", "") == "Negative"))
         self._filter_btns["PreCancer"].update_count(
-            sum(1 for p in all_pts if getattr(p, "status", "") == "PreCancer"))
+            sum(1 for p in pool if getattr(p, "status", "") == "PreCancer"))
 
     def _render_page(self):
         while self._rows_vl.count():
@@ -610,7 +620,8 @@ class PatientsContent(QWidget):
         if not page_pts:
             empty = QLabel("No patients found.")
             empty.setFont(_semi(12)); empty.setAlignment(Qt.AlignCenter)
-            empty.setStyleSheet(f"color:{TEXT_MID}; background:transparent;")
+            empty.setStyleSheet(
+                f"color:{TEXT_MID}; background:transparent;")
             self._rows_vl.addWidget(empty)
         else:
             for pt in page_pts:
@@ -649,6 +660,9 @@ class PatientsContent(QWidget):
                       if hasattr(parent, "parent") else None)
 
     def refresh(self):
+        self._selected_date = None
+        self._date_btn.setText("  📅  Select Date")
+        self._clear_date_btn.setVisible(False)
         self.load_patients()
 
 

@@ -504,22 +504,61 @@ Patient data **never leaves the device** and is never transmitted over any netwo
 
 ## 🔧 Build as EXE
 
+> [!NOTE]
+> This project does not include a `.spec` file in the repository since it would
+> contain a path specific to the original developer's machine. Instead, build the
+> EXE using the PyInstaller command below, which works correctly regardless of
+> where you clone the repository.
+
 To build a standalone Windows executable that requires no Python installation on the target machine:
 
+### Step 1 — Generate the app icon
+
 ```bash
-# Step 1 — Generate app icon from logo
 python -c "from PIL import Image; Image.open('assets/logo.png').convert('RGBA').save('assets/icon.ico', format='ICO', sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])"
-
-# Step 2 — Build the EXE
-pyinstaller OralCancerAI.spec --noconfirm
-
-# Output: dist/OralCancerAI.exe
 ```
 
-The resulting EXE is fully portable and runs on any Windows 10 / 11 machine without installing Python, PySide6, or PyTorch.
+### Step 2 — Build the EXE
 
-> **Note:** The final EXE will be approximately 1.5 GB due to the bundled PyTorch runtime and AI model weights. This is expected for medical AI desktop applications.
+Run this single command from the project root (in Command Prompt):
 
+```bash
+pyinstaller --name OralCancerAI ^
+  --windowed ^
+  --icon=assets/icon.ico ^
+  --add-data "assets;assets" ^
+  --add-data "models/weights;models/weights" ^
+  --hidden-import=sqlalchemy ^
+  --hidden-import=sqlalchemy.sql ^
+  --hidden-import=sqlalchemy.orm ^
+  --hidden-import=sqlalchemy.dialects.sqlite ^
+  --hidden-import=pytorch_grad_cam ^
+  --hidden-import=pytorch_grad_cam.grad_cam ^
+  --hidden-import=pytorch_grad_cam.base_cam ^
+  --hidden-import=pytorch_grad_cam.utils ^
+  --hidden-import=pytorch_grad_cam.utils.image ^
+  --hidden-import=ttach ^
+  --hidden-import=matplotlib ^
+  --hidden-import=matplotlib.pyplot ^
+  --hidden-import=matplotlib.backends.backend_agg ^
+  --collect-submodules=torch ^
+  --collect-submodules=torchvision ^
+  main.py
+```
+
+> **Note:** The `^` symbols are line-continuation characters for Windows Command Prompt. You can paste the whole block as-is.
+
+### Step 3 — Run the EXE
+
+The output will be located at:
+```
+dist/OralCancerAI/OralCancerAI.exe
+```
+
+> **Note:** The final build folder will be approximately 1.5 GB due to the bundled PyTorch runtime and AI model weights. This is expected for medical AI desktop applications.
+
+> [!TIP]
+> If you encounter a `ModuleNotFoundError` during the first run of the EXE, it usually means a library has hidden internal dependencies that PyInstaller missed. Add `--hidden-import=<missing_module_name>` to the command above and rebuild.
 ---
 
 ## 📦 Requirements
